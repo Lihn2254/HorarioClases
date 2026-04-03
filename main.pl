@@ -12,33 +12,33 @@
 % ------------------------------------------
 
 % Maestros y las asignaturas que pueden impartir
-imparte(audeves, redes).
-imparte(audeves, redes_2).
-imparte(cancela, ia).
-imparte(cancela, io).
-imparte(cancela, simulacion).
-imparte(cecena, tesebada).
+imparte(audev, rds).
+imparte(audev, rds2).
+imparte(cancel, ia).
+imparte(cancel, io).
+imparte(cancel, sim).
+imparte(cecena, tbd).
 imparte(cecena, io).
-imparte(cecena, redes_2).
+imparte(cecena, rds2).
 imparte(nevarez, poo).
-imparte(nevarez, simulacion).
-imparte(nevarez, tesebada).
-imparte(mosqueda, plf).
-imparte(mosqueda, daad).
-imparte(mosqueda, tesebada).
+imparte(nevarez, sim).
+imparte(nevarez, tbd).
+imparte(mosqued, plf).
+imparte(mosqued, daad).
+imparte(mosqued, tbd).
 imparte(villa, bdd).
 imparte(villa, iso).
-imparte(villa, simulacion).
+imparte(villa, sim).
 
 % Asignaturas y la cantidad de grupos/clases semanales necesarias
 % Cada grupo representa una planificación diferente
 requiere(io, 3).
-requiere(tesebada, 2).
+requiere(tbd, 2).
 requiere(ia, 2).
 requiere(plf, 1).
 requiere(bdd, 3).
-requiere(redes, 2).
-requiere(redes_2, 4).
+requiere(rds, 2).
+requiere(rds2, 4).
 requiere(poo, 4).
 requiere(daad, 2).
 requiere(iso, 1).
@@ -89,23 +89,32 @@ conflict(Maestro1, Maestro2) :-
     Maestro1 \= libre,
     Maestro1 == Maestro2.
 
-% Selecciona 'N' clases distintas para un mismo turno evitando empalme de maestros[cite: 11].
-% Esto garantiza indirectamente que a una asignatura no se le asigne mas de una 
-% clase al mismo grupo en un día, ya que solo hay 1 instancia por grupo al día[cite: 12].
-seleccionar_distintos(Clases, 0, [], Clases) :- !.
-seleccionar_distintos(Clases, N, [C|TurnoResto], Restantes) :-
+% Agrupa la lista de clases en bloques del tamaño de aulas disponibles para los 6 turnos,
+% validando que una misma materia no se imparta más de una vez al día para el mismo grupo (aula).
+agrupar_en_turnos(Clases, NumAulas, Grupos) :-
+    iniciar_historial(NumAulas, Historial),
+    agrupar_en_turnos_h(Clases, NumAulas, Historial, Grupos).
+
+iniciar_historial(0, []) :- !.
+iniciar_historial(N, [[]|R]) :-
     N > 0,
     N1 is N - 1,
-    seleccionar_distintos(Clases, N1, TurnoResto, TempRestantes),
-    select(C, TempRestantes, Restantes),
-    C = clase(_, Maestro),
-    \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2)).
+    iniciar_historial(N1, R).
 
-% Agrupa la lista de clases en bloques del tamaño de aulas disponibles para los 6 turnos.
-agrupar_en_turnos([], _, []).
-agrupar_en_turnos(Clases, NumAulas, [Turno | RestoTurnos]) :-
-    seleccionar_distintos(Clases, NumAulas, Turno, ClasesRestantes),
-    agrupar_en_turnos(ClasesRestantes, NumAulas, RestoTurnos).
+agrupar_en_turnos_h([], _, _, []).
+agrupar_en_turnos_h(Clases, NumAulas, Historial, [Turno | RestoTurnos]) :-
+    seleccionar_distintos_h(Clases, NumAulas, Turno, ClasesRestantes, Historial, NuevoHistorial),
+    agrupar_en_turnos_h(ClasesRestantes, NumAulas, NuevoHistorial, RestoTurnos).
+
+seleccionar_distintos_h(Clases, 0, [], Clases, [], []) :- !.
+seleccionar_distintos_h(Clases, N, [C|TurnoResto], Restantes, [Hist|HistResto], [[Mat|Hist]|NuevoHistResto]) :-
+    N > 0,
+    N1 is N - 1,
+    seleccionar_distintos_h(Clases, N1, TurnoResto, TempRestantes, HistResto, NuevoHistResto),
+    select(C, TempRestantes, Restantes),
+    C = clase(Mat, Maestro),
+    (Mat == libre ; \+ member(Mat, Hist)),
+    \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2)).
 
 % Genera identificadores de aulas dinamicos (a, b, c...)
 generar_aulas(0, _, []) :- !.
@@ -140,7 +149,7 @@ generar :-
     maestros_disponibles(Cuentas),
     asignar_maestros(Clases, Cuentas, ClasesAsignadas),
     pad_clases(ClasesAsignadas, NumAulas, ClasesAjustadas),
-    % Turnos típicos solicitados [cite: 8, 9]
+    % Turnos típicos solicitados
     Turnos = [t1, t2, t3, t4, t5, t6],
     agrupar_en_turnos(ClasesAjustadas, NumAulas, Grupos),
     etiquetar_horario(Grupos, Turnos, Aulas, Horario),
