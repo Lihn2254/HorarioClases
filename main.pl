@@ -11,63 +11,43 @@
 :- dynamic requiere/2.
 :- dynamic numero_turnos/1.
 
-% ------------------------------------------
-% BASE DE HECHOS (DATOS DE ENTRADA)
-% ------------------------------------------
+% -----------------------------------------------------------
+% BASE DE HECHOS (datos de entrada definidos por el usuario)
+% -----------------------------------------------------------
 
-% Número de turnos al día
-numero_turnos(6).
+% Cargar los requerimientos de horario desde un archivo de texto
+cargar_requerimientos(Archivo) :-
+    retractall(numero_turnos(_)),
+    retractall(imparte(_, _)),
+    retractall(requiere(_, _)),
+    open(Archivo, read, Stream),
+    leer_y_afirmar(Stream),
+    close(Stream).
 
-% Maestros y las asignaturas que pueden impartir
-imparte(audev, rds).
-imparte(audev, rds2).
-imparte(cancel, ia).
-imparte(cancel, io).
-imparte(cancel, sim).
-imparte(cecena, tbd).
-imparte(cecena, io).
-imparte(cecena, rds2).
-imparte(nevarez, poo).
-imparte(nevarez, sim).
-imparte(nevarez, tbd).
-imparte(mosqued, plf).
-imparte(mosqued, daad).
-imparte(mosqued, tbd).
-imparte(villa, bdd).
-imparte(villa, iso).
-imparte(villa, sim).
-
-% Asignaturas y la cantidad de grupos/clases semanales necesarias
-% Cada grupo representa una planificación diferente
-requiere(io, 3).
-requiere(tbd, 2).
-requiere(ia, 2).
-requiere(plf, 1).
-requiere(bdd, 3).
-requiere(rds, 2).
-requiere(rds2, 4).
-requiere(poo, 4).
-requiere(daad, 2).
-requiere(iso, 1).
+leer_y_afirmar(Stream) :-
+    read(Stream, Termino),
+    ( Termino == end_of_file -> true
+    ; assertz(Termino), leer_y_afirmar(Stream)
+    ).
 
 % ------------------------------------------
 % LÓGICA DE GENERACIÓN Y RESTRICCIONES
 % ------------------------------------------
 
-% Utilidad para replicar materias según los grupos que requieren.
+% Utilidad para replicar materias según los grupos que requieren
 repetir(_, 0, []) :- !.
 repetir(M, N, [M|R]) :- N > 0, N1 is N - 1, repetir(M, N1, R).
 
-% Genera una lista plana con todas las clases que se deben programar.
+% Genera una lista plana con todas las clases que se deben programar
 obtener_clases([], []).
-obtener_clases([(M, N)|T], Lista) :-
-    repetir(M, N, L1),
-    obtener_clases(T, L2),
-    append(L1, L2, Lista).
+obtener_clases([(Materia, N)|RestoMaterias], Clases) :-
+    repetir(Materia, N, L1),
+    obtener_clases(RestoMaterias, L2),
+    append(L1, L2, Clases).
 
-todas_las_clases(Lista) :-
-    findall((M, N), requiere(M, N), Req),
-    obtener_clases(Req, Lista).
+todas_las_clases(Clases) :-
+    findall((Materia, N), requiere(Materia, N), Req),
+    obtener_clases(Req, Clases).
 
 % Determina la disponibilidad de maestros asegurando que un maestro 
 % no imparta mas de 8 horas diarias (4 turnos de 2h).
@@ -77,12 +57,12 @@ turnos_maestros(Cuentas) :-
 
 % FASE 1: Asigna un maestro disponible a cada clase respetando la carga maxima.
 asignar_maestros([], _, []).
-asignar_maestros([M|Ms], Cuentas, [clase(M, Maestro)|Asignaciones]) :-
-    imparte(Maestro, M), % Obtener maestros que impartan la materia
-    select((Maestro, N), Cuentas, Resto),       
-    N > 0, % Verifica que no haya sobrepasado sus 8 horas.
-    N1 is N - 1,
-    asignar_maestros(Ms, [(Maestro, N1)|Resto], Asignaciones).
+asignar_maestros([Materia|RestoMaterias], Cuentas, [clase(Materia, Maestro)|Asignaciones]) :-
+    imparte(Maestro, Materia), % Obtiene los maestros que imparten la materia
+    select((Maestro, N), Cuentas, Resto), % Extrae una tupla (Maestro, Turnos) de Cuentas, y deja el resto en Resto
+    N > 0, % Verifica que el maestro aún tenga turnos disponibles
+    N1 is N - 1, % Descuenta 1 turno al maestro seleccionado
+    asignar_maestros(RestoMaterias, [(Maestro, N1)|Resto], Asignaciones).
 
 % Si la cantidad de clases no llena todas las aulas en todos los turnos, rellena con libres.
 rellenar_clases_libres(ClasesAsignadas, NumAulas, NumTurnos, ClasesAjustadas) :-
@@ -111,7 +91,9 @@ iniciar_historial(N, [[]|R]) :-
 
 agrupar_en_turnos_h([], _, _, []). % Caso base: Se detiene cuando ya no quedan clases por asignar a un turno.
 agrupar_en_turnos_h(Clases, NumAulas, Historial, [Turno | RestoTurnos]) :-
+    % Asigna las clases turno por turno
     seleccionar_distintos_h(Clases, NumAulas, Turno, ClasesRestantes, Historial, NuevoHistorial),
+    % Llamada recursiva para continuar el resto de turnos
     agrupar_en_turnos_h(ClasesRestantes, NumAulas, NuevoHistorial, RestoTurnos).
 
 % Caso base: Se detiene cuando ha sido generado el turno completo
@@ -182,7 +164,7 @@ etiquetar_grupo([clase(Materia, Maestro) | Resto], IdTurno, [IdAula | RestoAulas
 generar :-
     todas_las_clases(Clases), % Obtiene una lista aplanada "Clases" de todas las clases a impartir (ej. [io, io, io, tbd, tbd, ia, ia, plf, bdd|…])
     length(Clases, L), % Obtiene el número total de clases a impartir "L"
-    numero_turnos(NumTurnos), % Obtiene la cantidad de turnos definidos
+    numero_turnos(NumTurnos), % Obtiene la cantidad de turnos definidos por el usuario
     NumAulas is ceiling(L / NumTurnos), % Divide L entre el número total de turnos en el día y redondea el resultado hacia arriba para obtener el número de aulas necesarias "NumAulas"
     generar_aulas(NumAulas, 97, Aulas), % Genera una lista con las aulas generadas "Aulas", cada una representada por una letra, siendo la primera 'a' (ASCII 97)
     turnos_maestros(Cuentas), % Genera una lista de tuplas (Maestro, No. de turnos) llamada "Cuentas", con los maestros disponibles y el número de turnos máximo que pueden tener al día
@@ -190,8 +172,7 @@ generar :-
     % En caso de que las clases asignadas no sean suficientes para cubrir todos los turnos del día,
     % los turnos faltantes son agregados a como clase(libre, libre) a una nueva lista "ClasesAjustadas"
     rellenar_clases_libres(ClasesAsignadas, NumAulas, NumTurnos, ClasesAjustadas),
-    % Turnos típicos solicitados generados dinámicamente
-    generar_turnos(NumTurnos, Turnos),
+    generar_turnos(NumTurnos, Turnos), % Genera una lista "Turnos" con N elementos donde N = NumTurnos (ej. [t1, t2, t3, t4, t5])
     % Inicia la búsqueda con tiempo límite de 30 segundos
     catch(
         call_with_time_limit(30, (
