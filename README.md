@@ -26,9 +26,10 @@ Carga el código fuente en el intérprete:
 
 (asegúrate de que el archivo se llame horarios.pl).
 
-Para iniciar la generación del horario y visualizarlo, ejecuta la regla principal:
+Para iniciar la generación del horario y visualizarlo, primero debes cargar los requerimientos desde el archivo de texto y luego ejecutar la regla principal:
 
 ```prolog
+?- cargar_requerimientos('requerimientos_horario.txt').
 ?- generar.
 ```
 
@@ -50,7 +51,8 @@ A continuación, se detalla la funcionalidad de cada regla y predicado definido 
 
 ### 1. Directivas Dinámicas y Base de Hechos
 
-- `dynamic imparte/2, dynamic requiere/2`: Permiten que los hechos sobre qué profesor imparte qué materia y cuántas clases se requieren de una materia sean modificados (agregados o eliminados) durante el tiempo de ejecución.
+- `dynamic numero_turnos/1, imparte/2, requiere/2`: Permiten que los hechos sobre la configuración general (turnos), qué profesor imparte qué materia y cuántas clases se requieren de una materia sean modificados (agregados o eliminados) durante el tiempo de ejecución.
+- `cargar_requerimientos(Archivo)`: Lee un archivo de texto con la base de hechos (como `requerimientos_horario.txt`) limpia los datos anteriores y carga dinámicamente (`assertz`) la nueva configuración para el generador.
 - `imparte(Maestro, Materia)`: Define las asignaturas que cada docente está capacitado para enseñar.
 - `requiere(Materia, CantidadGrupos)`: Define la cantidad de bloques o clases semanales que deben programarse para una materia específica.
 
