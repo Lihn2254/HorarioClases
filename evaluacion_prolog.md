@@ -34,3 +34,42 @@ Actualmente, tus aulas se nombran con letras minúsculas (a, b, c, d...) porque 
 ### Ejercicio 4: Limitación laboral de los maestros (Dificultad: Media)
 El sindicato de maestros acaba de pasar una nueva reforma: ningún maestro puede dar más de 6 horas diarias (lo que equivale a 3 turnos, ya que cada turno es de 2 horas). Actualmente, el límite está configurado para 8 horas (4 turnos).
 * **Tu tarea:** Encuentra la regla responsable de asignar este límite inicial de turnos por docente (`turnos_maestros/1`) y modifícala para reflejar la nueva capacidad máxima de **3 turnos** por maestro.
+
+---
+
+## Sección 3: Nuevas Preguntas Teóricas
+
+5. **Predicados Integrados:** En la regla `turnos_maestros/1`, utilizas tanto `setof/3` como `findall/3`. ¿Cuál es la diferencia principal entre estos dos predicados y por qué es útil usar `setof/3` al recopilar la lista original de `Maestros`?
+- **Respuesta:** El predicado setof agrupa aquellos elementos idénticos, por lo que devolverá solo los elementos únicos de la lista de entrada sin repetir. En el caso de este programa, ignora la materia impartida ya que solo el maestro es relevante. Por otro lado, findall encuentra todos los elementos que pueden ser unificados con el primer parámetro, obteniéndolos desde el segundo parámetro (en este caso, del predicado member que devuelve uno por uno )
+
+6. **Desestructuración de Listas:** En el caso recursivo de `obtener_clases/2`, la cabeza de la regla es `obtener_clases([(Materia, N)|RestoMaterias], Clases)`. Explica detalladamente cómo Prolog hace pattern matching (unificación) con esta estructura cuando recibe una lista completa de tuplas.
+- **Respuesta:** 
+
+7. **Aritmética en Prolog:** En múltiples partes del código usas el operador `is` (por ejemplo, `N1 is N - 1`). ¿Qué diferencia fundamental tiene el operador `is` comparado con el operador de asignación/unificación `=` cuando se trata de expresiones matemáticas en Prolog? ¿Qué pasaría si intentaras escribir `N1 = N - 1`?
+- **Respuesta:** 
+
+8. **Orden de las Cláusulas:** En tus reglas recursivas (como `asignar_maestros/3` o `repetir/3`), el caso base `[]` o `0` siempre está escrito antes que la cláusula recursiva principal. ¿Por qué es fundamental en Prolog este orden estructural de las reglas? ¿Qué impacto o errores habría si resolvieras poner la cláusula recursiva primero y el caso base al final?
+- **Respuesta:** 
+
+---
+
+## Sección 4: Nuevos Ejercicios Prácticos
+
+### Ejercicio 5: Mensaje de cierre de tabla (Dificultad: Fácil)
+Al generar el horario, la tabla del plan de clases cierra con una simple línea de guiones.
+* **Tu tarea:** Modifica la lógica de impresión (en la zona correspondiente a `mostrar_horario/3`) para que, justo debajo de la última línea separadora de la cuadrícula, el programa imprima el texto `" FIN DEL HORARIO "`, haciendo que sea más claro cuándo termina el despliegue del resultado.
+
+### Ejercicio 6: Carga laboral como variable dinámica (Dificultad: Media)
+En el Ejercicio 4 cambiaste la capacidad laboral máxima a 3 turnos de manera estática. Ahora queremos que este dato sea configurable por el archivo de configuración.
+* **Tu tarea:** Agrega un nuevo hecho `:- dynamic max_turnos_maestro/1.` al cabezal. Muta su valor por defecto a `max_turnos_maestro(3).` Modifica `turnos_maestros/1` para que consulte este hecho dinámico al construir la lista en lugar del número duro `3`. Por último, asegúrate de actualizar también `limpiar_datos/0` y `cargar_requerimientos/1`.
+
+### Ejercicio 7: Validación temprana de materia nula (Dificultad: Media)
+Actualmente, si tratas de ejecutar `generar.` sin haber establecido las materias o cargado los datos, el programa avanzará con una lista `Clases` vacía y continuará procesando una tabla poblada de celdas "LIBRE".
+* **Tu tarea:** Modifica la regla principal `generar/0` para que, tras invocar `todas_las_clases(Clases)` (y obtener su longitud `L`), detenga en seco la ejecución si comprueba que la longitud `L` es `0`. De ser así, deberá imprimir `"Precaucion: No hay materias para programar."` y finalizar sin intentar calcular aulas, ni turnos, ni usar el `catch`. *Pista: Puedes auxiliarte de un IF (`(Condicion -> Then ; Else)`) o cortar la regla anticipadamente.*
+
+### Ejercicio 8: Restricción selectiva: Maestro inactivo por turno (Dificultad: Difícil)
+En este momento, la generación de bloques y turnos asume que todo maestro listado puede impartir sus horas en *cualquier* momento del día. Vamos a implementar que un maestro tenga restricciones.
+* **Tu tarea:** 
+  1. Define un hecho `:- dynamic no_disponible_turno/2.` (ej: `no_disponible_turno(mosqued, 1).` lo que implica que el maestro `mosqued` no asiste en el turno 1 numérico).
+  2. Vas a tener que modificar `agrupar_en_turnos/3`, la regla `agrupar_en_turnos_h/4` y `seleccionar_distintos_h/6`. Tu objetivo será añadir un nuevo parámetro "Contador de Turno" (que inicie en 1 y sume +1 con cada bloque). 
+  3. Dentro de `seleccionar_distintos_h`, usarás ese valor actual numérico para añadir una última validación: `\+ no_disponible_turno(Maestro, TurnoActual)`. Demuestra que el sistema ahora respeta que un maestro pueda vetar sus propios horarios de entrada.
