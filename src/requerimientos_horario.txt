@@ -15,7 +15,7 @@ imparte(nevarez, poo).
 imparte(nevarez, sim).
 imparte(nevarez, tbd).
 imparte(mosqued, plf).
-imparte(mosqued, daad).
+imparte(mosqued, dad).
 imparte(mosqued, tbd).
 imparte(villa, bdd).
 imparte(villa, iso).
@@ -23,13 +23,13 @@ imparte(villa, sim).
 
 % No. de grupos requeridos para cada materia
 % requiere(Materia, No. de grupos)
-requiere(io, 3).
-requiere(tbd, 2).
-requiere(ia, 2).
-requiere(plf, 1).
-requiere(bdd, 3).
-requiere(rds, 2).
-requiere(rds2, 4).
-requiere(poo, 4).
-requiere(daad, 2).
-requiere(iso, 1).
+requiere(io, 2).
+requiere(tbd, 1).
+requiere(ia, 1).
+requiere(plf, 0).
+requiere(bdd, 2).
+requiere(rds, 1).
+requiere(rds2, 3).
+requiere(poo, 3).
+requiere(dad, 1).
+requiere(iso, 0).

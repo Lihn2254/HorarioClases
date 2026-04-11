@@ -35,7 +35,7 @@ leer_y_afirmar(Stream) :-
 % ------------------------------------------
 
 % Utilidad para replicar materias según los grupos que requieren
-repetir(_, 0, []) :- !.
+repetir(_, 0, []).
 repetir(M, N, [M|R]) :- N > 0, N1 is N - 1, repetir(M, N1, R).
 
 % Genera una lista plana con todas las clases que se deben programar
@@ -50,10 +50,10 @@ todas_las_clases(Clases) :-
     obtener_clases(Req, Clases).
 
 % Determina la disponibilidad de maestros asegurando que un maestro 
-% no imparta mas de 8 horas diarias (4 turnos de 2h).
+% no imparta mas de 6 horas diarias (3 turnos de 2h).
 turnos_maestros(Cuentas) :-
     setof(M, Mat^imparte(M, Mat), Maestros),
-    findall((Maestro, 4), member(Maestro, Maestros), Cuentas).
+    findall((Maestro, 3), member(Maestro, Maestros), Cuentas).
 
 % FASE 1: Asigna un maestro disponible a cada clase respetando la carga maxima.
 asignar_maestros([], _, []).
@@ -166,7 +166,7 @@ generar :-
     length(Clases, L), % Obtiene el número total de clases a impartir "L"
     numero_turnos(NumTurnos), % Obtiene la cantidad de turnos definidos por el usuario
     NumAulas is ceiling(L / NumTurnos), % Divide L entre el número total de turnos en el día y redondea el resultado hacia arriba para obtener el número de aulas necesarias "NumAulas"
-    generar_aulas(NumAulas, 97, Aulas), % Genera una lista con las aulas generadas "Aulas", cada una representada por una letra, siendo la primera 'a' (ASCII 97)
+    generar_aulas(NumAulas, 65, Aulas), % Genera una lista con las aulas generadas "Aulas", cada una representada por una letra, siendo la primera 'a' (ASCII 97)
     turnos_maestros(Cuentas), % Genera una lista de tuplas (Maestro, No. de turnos) llamada "Cuentas", con los maestros disponibles y el número de turnos máximo que pueden tener al día
     asignar_maestros(Clases, Cuentas, ClasesAsignadas), % Genera una lista de hechos de tipo clase(Materia, Maestro) llamada "ClasesAsignadas"
     % En caso de que las clases asignadas no sean suficientes para cubrir todos los turnos del día,
@@ -203,8 +203,7 @@ mostrar_aulas([Aula|Resto], Turnos, Horario) :-
     mostrar_aulas(Resto, Turnos, Horario).
 
 imprimir_aula(Aula, Turnos, Horario) :-
-    upcase_atom(Aula, AulaUpper),
-    format('  ~w  |', [AulaUpper]),
+    format('  ~w  |', [Aula]),
     imprimir_celdas(Turnos, Aula, Horario),
     nl.
 
@@ -216,7 +215,7 @@ imprimir_celdas([Turno|Resto], Aula, Horario) :-
 imprimir_celda(Turno, Aula, Horario) :-
     member(asignacion(Turno, Aula, Maestro, Materia), Horario),
     (   Maestro == libre ->
-        format(' ~w \t|', ['-'])
+        format(' ~w \t|', ['LIBRE'])
     ;   format(' ~w, ~w \t|', [Maestro, Materia])
     ).
 
@@ -240,4 +239,6 @@ cargar_horario(Archivo) :-
 limpiar_datos :-
     retractall(imparte(_, _)),
     retractall(requiere(_, _)),
+    retractall(numero_turnos(_)),
+    writeln('Turnos eliminados.'),
     writeln('Planificacion, maestros definidos y requerimientos han sido eliminados.').
