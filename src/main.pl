@@ -2,11 +2,11 @@
 % PROGRAMACIÓN DE HORARIO SEMESTRAL
 % ==========================================
 
-% Para cargar la librería necesaria para el límite de tiempo
+% Librería para utilizada en regla generar para validar tiempo de respuesta del programa
 :- use_module(library(time)).
 
 % Para que los hechos puedan eliminarse y modificarse dinamicamente según 
-% los requerimientos al cambiar la cantidad de grupos.
+% los requerimientos cargados por el usuario
 :- dynamic imparte/2.
 :- dynamic requiere/2.
 :- dynamic numero_turnos/1.
@@ -15,7 +15,8 @@
 % BASE DE HECHOS (datos de entrada definidos por el usuario)
 % -----------------------------------------------------------
 
-% Cargar los requerimientos de horario desde un archivo de texto
+% Cargar los requerimientos del horario desde un archivo de texto
+% Archivo = 'Ruta del archivo'
 cargar_requerimientos(Archivo) :-
     retractall(numero_turnos(_)),
     retractall(imparte(_, _)),
@@ -36,7 +37,7 @@ leer_y_afirmar(Stream) :-
 % LÓGICA DE GENERACIÓN Y RESTRICCIONES
 % ------------------------------------------
 
-% Utilidad para replicar materias según los grupos que requieren
+% Regla para replicar materias según los grupos que requieren
 repetir(_, 0, []) :- !.
 repetir(M, N, [M|R]) :- N > 0, N1 is N - 1, repetir(M, N1, R).
 
@@ -52,12 +53,12 @@ todas_las_clases(Clases) :-
     obtener_clases(Req, Clases).
 
 % Determina la disponibilidad de maestros asegurando que un maestro 
-% no imparta mas de 8 horas diarias (4 turnos de 2h).
+% no imparta mas de 8 horas diarias (4 turnos de 2h)
 turnos_maestros(Cuentas) :-
     setof(M, Mat^imparte(M, Mat), Maestros),
     findall((Maestro, 4), member(Maestro, Maestros), Cuentas).
 
-% FASE 1: Asigna un maestro disponible a cada clase respetando la carga maxima.
+% Asigna un maestro disponible a cada clase respetando la cantidad máxima de turnos del maestro
 asignar_maestros([], _, []).
 asignar_maestros([Materia|RestoMaterias], Cuentas, [clase(Materia, Maestro)|Asignaciones]) :-
     imparte(Maestro, Materia), % Obtiene los maestros que imparten la materia
@@ -66,20 +67,20 @@ asignar_maestros([Materia|RestoMaterias], Cuentas, [clase(Materia, Maestro)|Asig
     N1 is N - 1, % Descuenta 1 turno al maestro seleccionado
     asignar_maestros(RestoMaterias, [(Maestro, N1)|Resto], Asignaciones).
 
-% Si la cantidad de clases no llena todas las aulas en todos los turnos, rellena con libres.
+% Si la cantidad de clases no llena todas las aulas en todos los turnos, rellena con libres
 rellenar_clases_libres(ClasesAsignadas, NumAulas, NumTurnos, ClasesAjustadas) :-
     length(ClasesAsignadas, L),
     Faltantes is (NumAulas * NumTurnos) - L, % NumAulas * No. de turnos = Total de turnos a cubrir en el día
     repetir(clase(libre, libre), Faltantes, Libres),
     append(ClasesAsignadas, Libres, ClasesAjustadas).
 
-% Evalúa si dos maestros causan un empalme en el mismo horario.
+% Evalúa si dos maestros causan un empalme en el mismo turno
 conflict(Maestro1, Maestro2) :-
     Maestro1 \= libre,
     Maestro1 == Maestro2.
 
-% Agrupa la lista de clases en bloques del tamaño de aulas disponibles para los 6 turnos,
-% validando que una misma materia no se imparta más de una vez al día para el mismo grupo (aula).
+% Agrupa la lista de clases en bloques del tamaño de aulas disponibles para todos los turnos,
+% validando que una misma materia no se imparta más de una vez al día para la misma aula
 agrupar_en_turnos(ClasesAjustadas, NumAulas, Grupos) :-
     iniciar_historial(NumAulas, Historial),
     agrupar_en_turnos_h(ClasesAjustadas, NumAulas, Historial, Grupos).
@@ -127,7 +128,7 @@ seleccionar_distintos_h(Clases, NumAulas, [ClaseActual|TurnoResto], Restantes, [
     % y verifica que el maestro de la clase seleccionada "ClaseActual" no se encuentre ya en la lista
     \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2)).
 
-% Genera identificadores de aulas dinamicos (a, b, c...)
+% Genera identificadores de aulas (a, b, c...) dado un código ASCII inicial
 generar_aulas(0, _, []) :- !.
 generar_aulas(N, Codigo, [Letra|Resto]) :-
     N > 0,
@@ -147,7 +148,7 @@ generar_turnos_aux(Actual, Max, [Turno|Resto]) :-
     Siguiente is Actual + 1,
     generar_turnos_aux(Siguiente, Max, Resto).
 
-% FASE 2: Etiqueta cada agrupación con su Turno y Aula correspondiente.
+% Etiqueta cada agrupación con su turno y aula correspondiente
 etiquetar_horario([], [], _, []).
 etiquetar_horario([Grupo | RestoGrupos], [IdTurno | RestoIds], Aulas, HorarioFinal) :-
     etiquetar_grupo(Grupo, IdTurno, Aulas, HorarioTurno),
@@ -159,10 +160,10 @@ etiquetar_grupo([clase(Materia, Maestro) | Resto], IdTurno, [IdAula | RestoAulas
     etiquetar_grupo(Resto, IdTurno, RestoAulas, RestoAsignaciones).
 
 % ------------------------------------------
-% SALIDA, FORMATO Y GESTIÓN DE DATOS 
+% SALIDA
 % ------------------------------------------
 
-% Entry Point Principal: Orquesta la generación y muestra del horario.
+% Entry point principal: Genera y muestra del horario
 generar :-
     todas_las_clases(Clases), % Obtiene una lista aplanada "Clases" de todas las clases a impartir (ej. [io, io, io, tbd, tbd, ia, ia, plf, bdd|…])
     verificar_datos_entrada,
@@ -176,29 +177,28 @@ generar :-
     % los turnos faltantes son agregados a como clase(libre, libre) a una nueva lista "ClasesAjustadas"
     rellenar_clases_libres(ClasesAsignadas, NumAulas, NumTurnos, ClasesAjustadas),
     generar_turnos(NumTurnos, Turnos), % Genera una lista "Turnos" con N elementos donde N = NumTurnos (ej. [t1, t2, t3, t4, t5])
-    % Inicia la búsqueda con tiempo límite de 30 segundos
+    % Inicia la generación del horario con tiempo límite de 30 segundos
     catch(
         call_with_time_limit(30, (
             agrupar_en_turnos(ClasesAjustadas, NumAulas, Grupos),
             etiquetar_horario(Grupos, Turnos, Aulas, Horario),
             mostrar_horario(Horario, Aulas, Turnos),
-            salvar_horario('horario_salvado.txt', Horario),
-            nl, writeln('-> Planificacion guardada en "horario_salvado.txt" exitosamente.')
+            guardar_horario('horario.txt', Horario),
+            nl, writeln('-> Planificacion guardada en "horario.txt" exitosamente.')
         )),
         time_limit_exceeded,
         (nl, writeln('Solucion no encontrada dentro del limite de tiempo.'))
     ).
 
+% Verifica que el archivo de requerimientos contenga imparte/2 y requiere/2
 verificar_datos_entrada :-
         (imparte(_, _), requiere(_, _) -> true 
         ; (writeln('Requerimientos del horario incompletos.\nPor favor cargue un archivo de configuracion valido'), fail)).
 
 mostrar_horario(Horario, Aulas, Turnos) :-
-    nl, writeln('=== PLANIFICACION DE UNA SEMANA TIPICA ==='),
-    % Se asume el mismo horario de lunes a viernes
+    nl, writeln('=== HORARIO SEMESTRAL ==='),
     writeln('Dias: Lunes a Viernes'),
     writeln('-----------------------------------------------------------------------------------------------------'),
-    % La cabecera será general ya que los turnos son dinámicos
     writeln('Aulas / Turnos'),
     writeln('-----------------------------------------------------------------------------------------------------'),
     mostrar_aulas(Aulas, Turnos, Horario),
@@ -227,13 +227,13 @@ imprimir_celda(Turno, Aula, Horario) :-
     ;   format(' ~w, ~w \t|', [Maestro, Materia])
     ).
 
-% Funciones de guardado y carga 
-salvar_horario(Archivo, Horario) :-
+guardar_horario(Archivo, Horario) :-
     open(Archivo, write, Stream),
     write(Stream, Horario),
     write(Stream, '.'),
     close(Stream).
 
+% Cargar y mostrar un horario ya existente
 cargar_horario(Archivo) :-
     open(Archivo, read, Stream),
     read(Stream, Horario),
@@ -247,4 +247,5 @@ cargar_horario(Archivo) :-
 limpiar_datos :-
     retractall(imparte(_, _)),
     retractall(requiere(_, _)),
-    writeln('Planificacion, maestros definidos y requerimientos han sido eliminados.').
+    retractall(numero_turnos(_)),
+    writeln('Requerimientos del horario eliminados.').
