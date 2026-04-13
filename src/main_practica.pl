@@ -10,16 +10,23 @@
 :- dynamic imparte/2.
 :- dynamic requiere/2.
 :- dynamic numero_turnos/1.
+:- dynamic max_turnos_maestro/1.
+:- dynamic no_disponible_turno/2.
 
 % -----------------------------------------------------------
 % BASE DE HECHOS (datos de entrada definidos por el usuario)
 % -----------------------------------------------------------
+
+max_turnos_maestro(4).
 
 % Cargar los requerimientos de horario desde un archivo de texto
 cargar_requerimientos(Archivo) :-
     retractall(numero_turnos(_)),
     retractall(imparte(_, _)),
     retractall(requiere(_, _)),
+    % En caso de que el archivo de requerimientos no contenga max_turnos_maestro, cómo establecer un default?
+    retractall(max_turnos_maestro(_)),
+    retractall(no_disponible_turno(_, _)),
     open(Archivo, read, Stream),
     leer_y_afirmar(Stream),
     close(Stream).
@@ -35,7 +42,7 @@ leer_y_afirmar(Stream) :-
 % ------------------------------------------
 
 % Utilidad para replicar materias según los grupos que requieren
-repetir(_, 0, []).
+repetir(_, 0, []) :- !.
 repetir(M, N, [M|R]) :- N > 0, N1 is N - 1, repetir(M, N1, R).
 
 % Genera una lista plana con todas las clases que se deben programar
@@ -53,7 +60,8 @@ todas_las_clases(Clases) :-
 % no imparta mas de 6 horas diarias (3 turnos de 2h).
 turnos_maestros(Cuentas) :-
     setof(M, Mat^imparte(M, Mat), Maestros),
-    findall((Maestro, 3), member(Maestro, Maestros), Cuentas).
+    max_turnos_maestro(MaxTurnos),
+    findall((Maestro, MaxTurnos), member(Maestro, Maestros), Cuentas).
 
 % FASE 1: Asigna un maestro disponible a cada clase respetando la carga maxima.
 asignar_maestros([], _, []).
@@ -80,7 +88,7 @@ conflict(Maestro1, Maestro2) :-
 % validando que una misma materia no se imparta más de una vez al día para el mismo grupo (aula).
 agrupar_en_turnos(ClasesAjustadas, NumAulas, Grupos) :-
     iniciar_historial(NumAulas, Historial),
-    agrupar_en_turnos_h(ClasesAjustadas, NumAulas, Historial, Grupos).
+    agrupar_en_turnos_h(ClasesAjustadas, NumAulas, Historial, Grupos, 1).
 
 % Genera una lista de N listas vacías donde N = No. de aulas.
 iniciar_historial(0, []) :- !.
@@ -89,16 +97,17 @@ iniciar_historial(N, [[]|R]) :-
     N1 is N - 1,
     iniciar_historial(N1, R).
 
-agrupar_en_turnos_h([], _, _, []). % Caso base: Se detiene cuando ya no quedan clases por asignar a un turno.
-agrupar_en_turnos_h(Clases, NumAulas, Historial, [Turno | RestoTurnos]) :-
+agrupar_en_turnos_h([], _, _, [], _). % Caso base: Se detiene cuando ya no quedan clases por asignar a un turno.
+agrupar_en_turnos_h(Clases, NumAulas, Historial, [Turno | RestoTurnos], ContTurno) :-
     % Asigna las clases turno por turno
-    seleccionar_distintos_h(Clases, NumAulas, Turno, ClasesRestantes, Historial, NuevoHistorial),
+    seleccionar_distintos_h(Clases, NumAulas, Turno, ClasesRestantes, Historial, NuevoHistorial, ContTurno),
+    TurnoActual is ContTurno + 1,
     % Llamada recursiva para continuar el resto de turnos
-    agrupar_en_turnos_h(ClasesRestantes, NumAulas, NuevoHistorial, RestoTurnos).
+    agrupar_en_turnos_h(ClasesRestantes, NumAulas, NuevoHistorial, RestoTurnos, TurnoActual).
 
 % Caso base: Se detiene cuando ha sido generado el turno completo
 % Importante -> TempRestantes en la llamada recursiva (véase abajo) es unificada con la lista completa de Clases
-seleccionar_distintos_h(Clases, 0, [], Clases, [], []) :- !.
+seleccionar_distintos_h(Clases, 0, [], Clases, [], [], _) :- !.
 
 % Clases: Lista de hechos clase(Materia, Maestro) o clase(libre, libre)
 % NumAulas: No. de aulas (ej. Aulas = ['a', 'b', 'c', 'd'], entonces NumAulas = 4)
@@ -107,13 +116,13 @@ seleccionar_distintos_h(Clases, 0, [], Clases, [], []) :- !.
 % [Hist | HistResto]: Historial descompuesto, donde Hist es el primer elemento de Historial, es decir, una lista
 %                     con las clases impartidas a un aula específica a lo largo de todos los turnos
 % [[Mat|Hist]|NuevoHistResto]: Variable a unificar (variable de salida)
-seleccionar_distintos_h(Clases, NumAulas, [ClaseActual|TurnoResto], Restantes, [Hist|HistResto], [[Mat|Hist]|NuevoHistResto]) :-
+seleccionar_distintos_h(Clases, NumAulas, [ClaseActual|TurnoResto], Restantes, [Hist|HistResto], [[Mat|Hist]|NuevoHistResto], TurnoActual) :-
     NumAulas > 0, % Verifica si aún quedan aulas por asignar en el turno actual
     NumAulas1 is NumAulas - 1, % Contador descendiente
     % Primero hace la llamada recursiva antes de hacer cualquier validación,
     % por lo tanto, las validaciones se haran desde NumAulas = 1 hasta NumAulas = N, de manera ascendiente
     % a.k.a. recorre las aulas desde la última hasta la primera
-    seleccionar_distintos_h(Clases, NumAulas1, TurnoResto, TempRestantes, HistResto, NuevoHistResto),
+    seleccionar_distintos_h(Clases, NumAulas1, TurnoResto, TempRestantes, HistResto, NuevoHistResto, TurnoActual),
     % Extrae una clase "ClaseActual" de la lista de clases no asignadas "TempRestantes", dejando el resto en la lista "Restante"
     select(ClaseActual, TempRestantes, Restantes),
     ClaseActual = clase(Mat, Maestro), % A partir de la clase seleccionda, extrae la materia "Mat" y el maestro que la imparte.
@@ -123,7 +132,8 @@ seleccionar_distintos_h(Clases, NumAulas, [ClaseActual|TurnoResto], Restantes, [
     % Extrae uno por uno los maestros existentes dentro de TurnoResto, 
     % que contiene las clases ya asignadas a otras aulas en el turno actual,
     % y verifica que el maestro de la clase seleccionada "ClaseActual" no se encuentre ya en la lista
-    \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2)).
+    \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2)),
+    \+ no_disponible_turno(Maestro, TurnoActual).
 
 % Genera identificadores de aulas dinamicos (a, b, c...)
 generar_aulas(0, _, []) :- !.
@@ -164,6 +174,7 @@ etiquetar_grupo([clase(Materia, Maestro) | Resto], IdTurno, [IdAula | RestoAulas
 generar :-
     todas_las_clases(Clases), % Obtiene una lista aplanada "Clases" de todas las clases a impartir (ej. [io, io, io, tbd, tbd, ia, ia, plf, bdd|…])
     length(Clases, L), % Obtiene el número total de clases a impartir "L"
+    (L < 1 -> (writeln('Precaucion: No hay materias para programar.'), fail) ; true),
     numero_turnos(NumTurnos), % Obtiene la cantidad de turnos definidos por el usuario
     NumAulas is ceiling(L / NumTurnos), % Divide L entre el número total de turnos en el día y redondea el resultado hacia arriba para obtener el número de aulas necesarias "NumAulas"
     generar_aulas(NumAulas, 65, Aulas), % Genera una lista con las aulas generadas "Aulas", cada una representada por una letra, siendo la primera 'a' (ASCII 97)
@@ -195,7 +206,8 @@ mostrar_horario(Horario, Aulas, Turnos) :-
     writeln('Aulas / Turnos'),
     writeln('-----------------------------------------------------------------------------------------------------'),
     mostrar_aulas(Aulas, Turnos, Horario),
-    writeln('-----------------------------------------------------------------------------------------------------').
+    writeln('-----------------------------------------------------------------------------------------------------'),
+    writeln(' FIN DEL HORARIO ').
 
 mostrar_aulas([], _, _).
 mostrar_aulas([Aula|Resto], Turnos, Horario) :-
@@ -240,5 +252,6 @@ limpiar_datos :-
     retractall(imparte(_, _)),
     retractall(requiere(_, _)),
     retractall(numero_turnos(_)),
+    retractall(max_turnos_maestro(_)),
     writeln('Turnos eliminados.'),
     writeln('Planificacion, maestros definidos y requerimientos han sido eliminados.').

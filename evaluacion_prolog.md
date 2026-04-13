@@ -40,16 +40,16 @@ El sindicato de maestros acaba de pasar una nueva reforma: ningún maestro puede
 ## Sección 3: Nuevas Preguntas Teóricas
 
 5. **Predicados Integrados:** En la regla `turnos_maestros/1`, utilizas tanto `setof/3` como `findall/3`. ¿Cuál es la diferencia principal entre estos dos predicados y por qué es útil usar `setof/3` al recopilar la lista original de `Maestros`?
-- **Respuesta:** El predicado setof agrupa aquellos elementos idénticos, por lo que devolverá solo los elementos únicos de la lista de entrada sin repetir. En el caso de este programa, ignora la materia impartida ya que solo el maestro es relevante. Por otro lado, findall encuentra todos los elementos que pueden ser unificados con el primer parámetro, obteniéndolos desde el segundo parámetro (en este caso, del predicado member que devuelve uno por uno )
+- **Respuesta:** El predicado setof agrupa aquellos elementos idénticos, por lo que devolverá solo los elementos únicos de la lista de entrada sin repetir. En el caso de este programa, ignora la materia impartida ya que solo el maestro es relevante. Por otro lado, findall encuentra todos los elementos que pueden ser unificados con el primer parámetro, obteniéndolos desde el segundo parámetro (en este caso, del predicado member que devuelve uno por uno).
 
 6. **Desestructuración de Listas:** En el caso recursivo de `obtener_clases/2`, la cabeza de la regla es `obtener_clases([(Materia, N)|RestoMaterias], Clases)`. Explica detalladamente cómo Prolog hace pattern matching (unificación) con esta estructura cuando recibe una lista completa de tuplas.
-- **Respuesta:** 
+- **Respuesta:** Al recibir una lista, Prolog toma el primer elemento, comportamiento indicado por el pipe |, después, de ser posible, unifica ese elemento con la tupla (Materia, N). Como la lista de entrada contiene tuplas de dos elementos (A, B), entonces es posible la unificación; Materia unifica con el primer elemento de la tupla y N con el segundo.
 
 7. **Aritmética en Prolog:** En múltiples partes del código usas el operador `is` (por ejemplo, `N1 is N - 1`). ¿Qué diferencia fundamental tiene el operador `is` comparado con el operador de asignación/unificación `=` cuando se trata de expresiones matemáticas en Prolog? ¿Qué pasaría si intentaras escribir `N1 = N - 1`?
-- **Respuesta:** 
+- **Respuesta:** El operador is indica que se debe realizar una unificación solo si es posible aritméticamente, mientras que el operador = no toma en cuenta la posibilidad aritmética, sino que simplemente unifica la estructura recibida con la variable. Si se escribe N1 = N - 1, entonces N1 no unificará con el resultado de la operación, sino con la estructura completa del predicado, es decir, N - 1. Ejemplo: N1 sería igual a 5 - 1, no a 4.
 
 8. **Orden de las Cláusulas:** En tus reglas recursivas (como `asignar_maestros/3` o `repetir/3`), el caso base `[]` o `0` siempre está escrito antes que la cláusula recursiva principal. ¿Por qué es fundamental en Prolog este orden estructural de las reglas? ¿Qué impacto o errores habría si resolvieras poner la cláusula recursiva primero y el caso base al final?
-- **Respuesta:** 
+- **Respuesta:** Prolog evalúa o recorre las reglas de arriba hacia abajo, por ello nos interesa que el caso base, que indica si la recursividad debe continuar o no, sea evaluado primero. En caso de ponerlo después de la regla recursiva, todo funcionará correctamente solo si se tiene una verificación dentro de la regla recursiva (ej. N > 0) que impida que la recursividad continua, pero se corre el riesgo de que, en caso de olvidar esa verificación, el programa se comporte incorrectamente.
 
 ---
 

@@ -1,3 +1,6 @@
+% Número máximo de turnos que pueden tener los maestros al día
+%max_turnos_maestro(4).
+
 % Número de turnos en el día
 numero_turnos(6).
 
@@ -23,13 +26,15 @@ imparte(villa, sim).
 
 % No. de grupos requeridos para cada materia
 % requiere(Materia, No. de grupos)
-requiere(io, 2).
-requiere(tbd, 1).
-requiere(ia, 1).
-requiere(plf, 0).
-requiere(bdd, 2).
-requiere(rds, 1).
-requiere(rds2, 3).
-requiere(poo, 3).
-requiere(dad, 1).
-requiere(iso, 0).
+requiere(io, 3).
+requiere(tbd, 2).
+requiere(ia, 2).
+requiere(plf, 1).
+requiere(bdd, 3).
+requiere(rds, 2).
+requiere(rds2, 4).
+requiere(poo, 4).
+requiere(dad, 2).
+requiere(iso, 1).
+
+no_disponible_turno(mosqued, 2).
