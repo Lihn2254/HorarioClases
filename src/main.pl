@@ -22,7 +22,9 @@ cargar_requerimientos(Archivo) :-
     retractall(requiere(_, _)),
     open(Archivo, read, Stream),
     leer_y_afirmar(Stream),
-    close(Stream).
+    close(Stream),
+    % Si el numero de turnos no es especificado, toma el valor 6 por default.
+    (numero_turnos(_) -> true ; assertz(numero_turnos(6))).
 
 leer_y_afirmar(Stream) :-
     read(Stream, Termino),
@@ -163,6 +165,7 @@ etiquetar_grupo([clase(Materia, Maestro) | Resto], IdTurno, [IdAula | RestoAulas
 % Entry Point Principal: Orquesta la generación y muestra del horario.
 generar :-
     todas_las_clases(Clases), % Obtiene una lista aplanada "Clases" de todas las clases a impartir (ej. [io, io, io, tbd, tbd, ia, ia, plf, bdd|…])
+    verificar_datos_entrada,
     length(Clases, L), % Obtiene el número total de clases a impartir "L"
     numero_turnos(NumTurnos), % Obtiene la cantidad de turnos definidos por el usuario
     NumAulas is ceiling(L / NumTurnos), % Divide L entre el número total de turnos en el día y redondea el resultado hacia arriba para obtener el número de aulas necesarias "NumAulas"
@@ -185,6 +188,10 @@ generar :-
         time_limit_exceeded,
         (nl, writeln('Solucion no encontrada dentro del limite de tiempo.'))
     ).
+
+verificar_datos_entrada :-
+        (imparte(_, _), requiere(_, _) -> true 
+        ; (writeln('Requerimientos del horario incompletos.\nPor favor cargue un archivo de configuracion valido'), fail)).
 
 mostrar_horario(Horario, Aulas, Turnos) :-
     nl, writeln('=== PLANIFICACION DE UNA SEMANA TIPICA ==='),
@@ -220,7 +227,7 @@ imprimir_celda(Turno, Aula, Horario) :-
     ;   format(' ~w, ~w \t|', [Maestro, Materia])
     ).
 
-% Funciones de guardado y carga requeridas 
+% Funciones de guardado y carga 
 salvar_horario(Archivo, Horario) :-
     open(Archivo, write, Stream),
     write(Stream, Horario),

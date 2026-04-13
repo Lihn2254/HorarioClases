@@ -1,5 +1,5 @@
 % Número de turnos en el día
-numero_turnos(6).
+% numero_turnos(6).
 
 % Clases impartidas por cada profesor
 % imparte (Profesor, Materia)
@@ -15,7 +15,7 @@ imparte(nevarez, poo).
 imparte(nevarez, sim).
 imparte(nevarez, tbd).
 imparte(mosqued, plf).
-imparte(mosqued, daad).
+imparte(mosqued, dad).
 imparte(mosqued, tbd).
 imparte(villa, bdd).
 imparte(villa, iso).
@@ -31,5 +31,5 @@ requiere(bdd, 3).
 requiere(rds, 2).
 requiere(rds2, 4).
 requiere(poo, 4).
-requiere(daad, 2).
+requiere(dad, 2).
 requiere(iso, 1).
