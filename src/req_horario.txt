@@ -1,5 +1,5 @@
 % Número de turnos en el día
-numero_turnos(4).
+numero_turnos(6).
 
 % Clases impartidas por cada profesor
 % imparte (Profesor, Materia)
