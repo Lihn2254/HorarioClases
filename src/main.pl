@@ -179,8 +179,8 @@ generar :-
             agrupar_en_turnos(ClasesAjustadas, NumAulas, Grupos),
             etiquetar_horario(Grupos, Turnos, Aulas, Horario),
             mostrar_horario(Horario, Aulas, Turnos),
-            salvar_horario('horario_salvado.txt', Horario),
-            nl, writeln('-> Planificacion guardada en "horario_salvado.txt" exitosamente.')
+            salvar_horario('horario.txt', Horario),
+            nl, writeln('-> Planificacion guardada en "horario.txt" exitosamente.')
         )),
         time_limit_exceeded,
         (nl, writeln('Solucion no encontrada dentro del limite de tiempo.'))

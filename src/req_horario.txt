@@ -37,4 +37,4 @@ requiere(poo, 4).
 requiere(dad, 2).
 requiere(iso, 1).
 
-no_disponible_turno(mosqued, 2).
+no_disponible_turno(mosqued, 1).

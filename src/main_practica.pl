@@ -24,12 +24,14 @@ cargar_requerimientos(Archivo) :-
     retractall(numero_turnos(_)),
     retractall(imparte(_, _)),
     retractall(requiere(_, _)),
-    % En caso de que el archivo de requerimientos no contenga max_turnos_maestro, cómo establecer un default?
     retractall(max_turnos_maestro(_)),
     retractall(no_disponible_turno(_, _)),
     open(Archivo, read, Stream),
     leer_y_afirmar(Stream),
-    close(Stream).
+    close(Stream),
+    % Ejercicio 9: Asignar valores por defecto si el archivo no los provee
+    ( max_turnos_maestro(_) -> true ; assertz(max_turnos_maestro(4)) ),
+    ( numero_turnos(_) -> true ; assertz(numero_turnos(6)) ).
 
 leer_y_afirmar(Stream) :-
     read(Stream, Termino),
@@ -132,7 +134,7 @@ seleccionar_distintos_h(Clases, NumAulas, [ClaseActual|TurnoResto], Restantes, [
     % Extrae uno por uno los maestros existentes dentro de TurnoResto, 
     % que contiene las clases ya asignadas a otras aulas en el turno actual,
     % y verifica que el maestro de la clase seleccionada "ClaseActual" no se encuentre ya en la lista
-    \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2)),
+    (Maestro = villa ; \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2))),
     \+ no_disponible_turno(Maestro, TurnoActual).
 
 % Genera identificadores de aulas dinamicos (a, b, c...)
@@ -190,8 +192,8 @@ generar :-
             agrupar_en_turnos(ClasesAjustadas, NumAulas, Grupos),
             etiquetar_horario(Grupos, Turnos, Aulas, Horario),
             mostrar_horario(Horario, Aulas, Turnos),
-            salvar_horario('horario_salvado.txt', Horario),
-            nl, writeln('-> Planificacion guardada en "horario_salvado.txt" exitosamente.')
+            salvar_horario('horario.txt', Horario),
+            nl, writeln('-> Planificacion guardada en horario.txt" exitosamente.')
         )),
         time_limit_exceeded,
         (nl, writeln('Solucion no encontrada dentro del limite de tiempo.'))
