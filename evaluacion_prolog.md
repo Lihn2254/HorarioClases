@@ -73,3 +73,45 @@ En este momento, la generación de bloques y turnos asume que todo maestro lista
   1. Define un hecho `:- dynamic no_disponible_turno/2.` (ej: `no_disponible_turno(mosqued, 1).` lo que implica que el maestro `mosqued` no asiste en el turno 1 numérico).
   2. Vas a tener que modificar `agrupar_en_turnos/3`, la regla `agrupar_en_turnos_h/4` y `seleccionar_distintos_h/6`. Tu objetivo será añadir un nuevo parámetro "Contador de Turno" (que inicie en 1 y sume +1 con cada bloque). 
   3. Dentro de `seleccionar_distintos_h`, usarás ese valor actual numérico para añadir una última validación: `\+ no_disponible_turno(Maestro, TurnoActual)`. Demuestra que el sistema ahora respeta que un maestro pueda vetar sus propios horarios de entrada.
+
+---
+
+## Sección 5: Últimas Preguntas Teóricas (Conceptos Avanzados)
+
+9. **Manejo de Excepciones y Tiempos:** En tú código principal `generar/0`, ahora usas `catch(call_with_time_limit(30, ...), time_limit_exceeded, ...)`. ¿Qué es exactamente el `catch/3` dentro del paradigma lógico y qué sucede con el flujo de ejecución de Prolog una vez que la excepción entra en el bloque de "atrapar" (es decir, qué valor de verdad devuelve)?
+
+10. **Comprobación Existencial Dinámica:** Para asignar valores por defecto a un hecho dinámico (ej. `max_turnos_maestro/1`), se sugirió usar la cláusula `( max_turnos_maestro(_) -> true ; assertz(max_turnos_maestro(3)) )`. ¿Qué propósito tiene específicamente el caracter comodín `_` dentro de esa evaluación en lugar de usar una variable normal como `N` (ej. `max_turnos_maestro(N)`) ?
+
+11. **Memoria en Backtracking:** Cuando Prolog falla durante una asignación compleja en `seleccionar_distintos_h` y se ve forzado a hacer *backtracking* (retroceso) a un nivel superior, ¿qué le ocurre internamente en la memoria a las variables temporales (como `Maestro` o `ClaseActual`) que ya habían sido unificadas tentativamente en esa rama fallida?
+
+12. **Streams I/O en Lenguajes Declarativos:** Al final de tu archivo implementaste reglas para guardar y cargar el horario usando `open/3` y `close/1`. ¿Qué es un de manera simple un *Stream* lógico, y por qué no hacer `close(Stream)` generaría un problema crítico si corres `generar/0` cientos de veces seguidas en consola?
+
+---
+
+## Sección 6: Retos Prácticos Finales
+
+Realiza estas últimas implementaciones en `main_practica.pl`. Esta vez la complejidad te exigirá repensar algunas validaciones recursivas y listas dinámicas.
+
+### Ejercicio 9: Valores por defecto en variables dinámicas (Dificultad: Media)
+Acabamos de hablar de cómo proteger un sistema contra la falta de configuraciones en un archivo de texto.
+* **Tu tarea:** Modifica la regla `cargar_requerimientos/1` o añade una nueva regla `validar_requerimientos/0` al final de `generar/0`. Si el archivo de texto **no incluye** `max_turnos_maestro/1` o `numero_turnos/1`, el programa debe percatarse y usar un `assertz` para imponer los valores de `3` y `6` respectivamente, impidiendo un fallo crítico. 
+
+### Ejercicio 10: Reporte de carga laboral real (Dificultad: Difícil)
+Sabemos que un maestro no puede dar más de `max_turnos_maestro`, pero resulta útil saber cuántos turnos dio _realmente_ al finalizar.
+* **Tu tarea:** Crea una nueva regla `reporte_carga(Horario)`. Ésta regla debe ejecutarse con éxito al final de `generar/0` (sólo si no hubo error de tiempo). Deberá calcular y mostrar en consola un resumen de la forma:
+`Maestro: lara, Turnos Asignados: 2`
+`Maestro: mosqued, Turnos Asignados: 3`
+*(Pista: Puedes iterar la lista de `Maestros` existente, usar un predicado como `findall` o un contador recursivo sobre tu arreglo `Horario` para contar cuántas veces aparece ese maestro sin contar las celdas marcadas como 'libre', y luego imprimir los nombres).`
+
+### Ejercicio 11: Restricción Horizontal / Conflicto Global de Materia (Dificultad: Difícil)
+Supongamos que para la materia `fisica_avanzada` la escuela solo cuenta con 1 kit de laboratorio. Por tanto, **dos grupos diferentes no pueden llevar física avanzada en el MISMO turno**, incluso si son dados por dos maestros diferentes en aulas diferentes.
+* **Tu tarea:** 
+  1. Define un hecho dinámico llamado `:- dynamic materia_unica_por_turno/1.`
+  2. Inserta una regla de prueba (ej. `materia_unica_por_turno(programacion)`).
+  3. Modifica la iteración de tu construcción de aulas `seleccionar_distintos_h`. Asegúrate de que, en un mismo bloque de turno (`TurnoTemporal` o revisando las que ya has insertado), no existan 2 clases que compartan el mismo nombre de materia si dicha materia está declarada como `materia_unica_por_turno`.
+
+### Ejercicio 12: Exclusión Visual de Aulas Vacantes (Dificultad: Difícil)
+Actualmente, en la regla `mostrar_horario/3`, se imprime una tabla basada en un número total de columnas generadas (`Aulas` de la 'A' a la 'Z'). Sin embargo, hay un fallo lógico: si un horario tiene pocas clases y la escuela dicta tener aula hasta la 'Z', se imprimirán decenas de aulas que solamente contendrán campos `'LIBRE'` durante todo el día.
+* **Tu tarea:** Modifica la lógica de la impresión o la generación de la propia lista `Aulas`. El script debe ser lo suficientemente inteligente para identificar si un Aula (ej: `E`) estuvo completamente vacía todo el día y, de ser así, **no imprimir esa columna de aula** en absoluto.
+*(Pista 1: Puedes transformar tu forma de extraer el "Header" usando un `setof` de tu matriz de horario y excluir o purgar las aulas inútiles antes de mandarlas a imprimir).*
+*(Pista 2: La regla `imprimir_cabecera` y la evaluación dentro de `imprimir_turnos` también deben ajustarse a este nuevo arreglo recortado).*
