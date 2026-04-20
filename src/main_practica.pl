@@ -12,6 +12,8 @@
 :- dynamic numero_turnos/1.
 :- dynamic max_turnos_maestro/1.
 :- dynamic no_disponible_turno/2.
+:- dynamic materia_unica_por_turno/1.
+:- dynamic maestro_omnipresente/1.
 
 % -----------------------------------------------------------
 % BASE DE HECHOS (datos de entrada definidos por el usuario)
@@ -26,6 +28,8 @@ cargar_requerimientos(Archivo) :-
     retractall(requiere(_, _)),
     retractall(max_turnos_maestro(_)),
     retractall(no_disponible_turno(_, _)),
+    retractall(materia_unica_por_turno(_)),
+    retractall(maestro_omnipresente(_)),
     open(Archivo, read, Stream),
     leer_y_afirmar(Stream),
     close(Stream),
@@ -86,6 +90,10 @@ conflict(Maestro1, Maestro2) :-
     Maestro1 \= libre,
     Maestro1 == Maestro2.
 
+conflict_materia(Materia1, Materia2) :-
+    (materia_unica_por_turno(Materia1)),
+    Materia1 == Materia2.
+
 % Agrupa la lista de clases en bloques del tamaño de aulas disponibles para los 6 turnos,
 % validando que una misma materia no se imparta más de una vez al día para el mismo grupo (aula).
 agrupar_en_turnos(ClasesAjustadas, NumAulas, Grupos) :-
@@ -131,10 +139,11 @@ seleccionar_distintos_h(Clases, NumAulas, [ClaseActual|TurnoResto], Restantes, [
     % Verifica si la materia es "libre" o si la materia no pertenece al historial del aula actual, 
     % es decir, si la materia no ha sido impartida aún a dicha aula
     (Mat == libre ; \+ member(Mat, Hist)),
+    (\+ (member(clase(Mat2, _), TurnoResto), conflict_materia(Mat, Mat2))),
     % Extrae uno por uno los maestros existentes dentro de TurnoResto, 
     % que contiene las clases ya asignadas a otras aulas en el turno actual,
     % y verifica que el maestro de la clase seleccionada "ClaseActual" no se encuentre ya en la lista
-    (Maestro = villa ; \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2))),
+    (maestro_omnipresente(Maestro) ; \+ (member(clase(_, M2), TurnoResto), conflict(Maestro, M2))),
     \+ no_disponible_turno(Maestro, TurnoActual).
 
 % Genera identificadores de aulas dinamicos (a, b, c...)
@@ -193,11 +202,38 @@ generar :-
             etiquetar_horario(Grupos, Turnos, Aulas, Horario),
             mostrar_horario(Horario, Aulas, Turnos),
             salvar_horario('horario.txt', Horario),
-            nl, writeln('-> Planificacion guardada en horario.txt" exitosamente.')
+            nl, writeln('-> Planificacion guardada en horario.txt" exitosamente.'),
+            reporte_carga(Horario)
         )),
         time_limit_exceeded,
         (nl, writeln('Solucion no encontrada dentro del limite de tiempo.'))
     ).
+
+obtener_maestros(Maestros):-
+    setof(Maestro, Mat^imparte(Maestro, Mat), Maestros).
+
+reporte_carga(Horario):-
+    obtener_maestros(Maestros),
+    nl, writeln('=== REPORTE DE ASIGNACION DE MAESTROS ==='),
+    writeln('------------------------------------------'),
+    reporte_carga_aux(Horario, Maestros).
+
+reporte_carga_aux(_, []):- !.
+reporte_carga_aux(Horario, [Maestro | RestoMaestros]):-
+    contar_apariciones(Maestro, Horario, Apariciones),
+    format('Maestro: ~w, Turnos asignados: ~w~n', [Maestro, Apariciones]),
+    reporte_carga_aux(Horario, RestoMaestros).
+
+contar_apariciones(_, [], 0):- !.
+contar_apariciones(Maestro, [ asignacion(_, _, M, _) | RestoAsignaciones], Apariciones):-
+    Maestro == M, !,
+    contar_apariciones(Maestro, RestoAsignaciones, AparicionesPrevias),
+    Apariciones is AparicionesPrevias + 1.
+
+contar_apariciones(Maestro, [ _ | RestoAsignaciones], Apariciones):-
+    contar_apariciones(Maestro, RestoAsignaciones, Apariciones).
+
+%contar_apariciones(audev, [asignacion(t1, A, villa, io), asignacion(t2, B, villa, rds), asignacion(t1, B, cancel, ia)], Apariciones).
 
 mostrar_horario(Horario, Aulas, Turnos) :-
     nl, writeln('=== PLANIFICACION DE UNA SEMANA TIPICA ==='),

@@ -8,21 +8,26 @@ numero_turnos(6).
 % imparte (Profesor, Materia)
 imparte(audev, rds).
 imparte(audev, rds2).
+imparte(audev, fis).
 imparte(cancel, ia).
 imparte(cancel, io).
 imparte(cancel, sim).
 imparte(cecena, tbd).
 imparte(cecena, io).
 imparte(cecena, rds2).
+imparte(cecena, fis).
 imparte(nevarez, poo).
 imparte(nevarez, sim).
 imparte(nevarez, tbd).
+imparte(nevarez, fis).
 imparte(mosqued, plf).
 imparte(mosqued, dad).
 imparte(mosqued, tbd).
+imparte(mosqued, fis).
 imparte(villa, bdd).
 imparte(villa, iso).
 imparte(villa, sim).
+imparte(villa, fis).
 
 % No. de grupos requeridos para cada materia
 % requiere(Materia, No. de grupos)
@@ -30,11 +35,16 @@ requiere(io, 3).
 requiere(tbd, 2).
 requiere(ia, 2).
 requiere(plf, 1).
-requiere(bdd, 3).
+requiere(bdd, 2).
 requiere(rds, 2).
-requiere(rds2, 4).
-requiere(poo, 4).
+requiere(rds2, 3).
+requiere(poo, 3).
 requiere(dad, 2).
 requiere(iso, 1).
+requiere(fis, 3).
+
+materia_unica_por_turno(fis).
 
 no_disponible_turno(mosqued, 1).
+
+maestro_omnipresente(cancel).
